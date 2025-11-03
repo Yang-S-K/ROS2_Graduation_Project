@@ -1,0 +1,17 @@
+// generated from rosidl_adapter/resource/srv.idl.em
+// with input from ysk_msgs/srv/SaveOpenCv.srv
+// generated code does not contain a copyright notice
+
+
+module ysk_msgs {
+  module srv {
+    struct SaveOpenCv_Request {
+      boolean save;
+
+      string location;
+    };
+    struct SaveOpenCv_Response {
+      boolean already;
+    };
+  };
+};

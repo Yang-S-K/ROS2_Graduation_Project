@@ -1,0 +1,4 @@
+# generated from rosidl_cmake/cmake/rosidl_cmake-extras.cmake.in
+
+set(ysk_msgs_IDL_FILES "msg/Camera.idl;msg/CameraSave.idl;msg/Zoom.idl;msg/HSVValue.idl;msg/YUVValue.idl;msg/Location.idl;msg/OpenCvOrder.idl;srv/CameraInfo.idl;srv/HSVInfo.idl;srv/YUVInfo.idl;srv/OpenCvInfo.idl;srv/SaveHSV.idl;srv/SaveYUV.idl;srv/SaveOpenCv.idl")
+set(ysk_msgs_INTERFACE_FILES "msg/Camera.msg;msg/CameraSave.msg;msg/Zoom.msg;msg/HSVValue.msg;msg/YUVValue.msg;msg/Location.msg;msg/OpenCvOrder.msg;srv/CameraInfo.srv;srv/CameraInfo_Request.msg;srv/CameraInfo_Response.msg;srv/HSVInfo.srv;srv/HSVInfo_Request.msg;srv/HSVInfo_Response.msg;srv/YUVInfo.srv;srv/YUVInfo_Request.msg;srv/YUVInfo_Response.msg;srv/OpenCvInfo.srv;srv/OpenCvInfo_Request.msg;srv/OpenCvInfo_Response.msg;srv/SaveHSV.srv;srv/SaveHSV_Request.msg;srv/SaveHSV_Response.msg;srv/SaveYUV.srv;srv/SaveYUV_Request.msg;srv/SaveYUV_Response.msg;srv/SaveOpenCv.srv;srv/SaveOpenCv_Request.msg;srv/SaveOpenCv_Response.msg")

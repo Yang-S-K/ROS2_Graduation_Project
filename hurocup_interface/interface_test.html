@@ -1,0 +1,2449 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<link rel="SHORTCUT ICON" href="./picture/icon.png">
+
+	<!-- CSS References -->
+	<link rel="stylesheet" type="text/css" rel="stylesheet" href="./css/style.css">
+
+	<!-- JavaScript References -->
+	<script type="text/javascript" src="./js/roslib/eventemitter2.min.js"></script>
+	<script type="text/javascript" src="./js/roslib/roslib.min.js"></script>
+	<script type="text/javascript" type="text/javascript">
+
+		var wasOnline = true;
+		var ros = new ROSLIB.Ros({
+		url: "ws://0.0.0.0:9090"
+		});
+
+		function checkConnection() {
+			if (ros && window.navigator.onLine) {
+				document.body.style.backgroundImage = 'url(./picture/Background.jpg)';
+				// console.log('Setting background to online image');
+				if(!wasOnline){
+					console.log("Network status changed to online. Triggering enterAddress().");
+					enterAddress();
+					wasOnline = true;
+				}
+
+			}else{
+				document.body.style.backgroundImage = 'url(./picture/Background.jpg)';
+				console.log('Setting background to offline image');
+				if(wasOnline){
+					console.log("Network status changed to offline. Triggering enterAddress().");
+					enterAddress();
+					wasOnline = false;
+				}
+				wasOnline = false;
+			}	
+		}
+		
+
+		// Listen to online and offline events
+		window.addEventListener('online', checkConnection);
+		window.addEventListener('offline', checkConnection);
+
+		ros.on('connection', function () {
+			console.log('Connection made!');
+			connectFlag = true;
+			document.getElementById('connected').style.display = 'inline';
+			document.getElementById("orign_image").style.display = 'inline';
+			document.getElementById("color_image").style.display = 'inline';
+			document.getElementById('zoomin_image').style.display = 'inline';
+			// document.getElementById("filter_image").style.display = 'inline';
+			locationBack()
+			checkConnectionInterval = setInterval(checkConnection, 10);
+		});
+		ros.on('error', function (error) {
+			console.log('Error connecting to websocket server: ', error);
+			document.getElementById('connected').style.display = 'none';
+			
+			document.body.style.backgroundImage = 'url(./picture/Gray_Background.jpg)';
+			clearInterval(checkConnectionInterval);
+		});
+		ros.on('close', function () {
+			console.log('Connection to websocket server closed.');
+			B_Measure_Flag = true;
+			document.getElementById("color_image").style.display = 'none';
+			document.getElementById("connected").style.display = 'none';
+			document.getElementById("orign_image").style.display = 'none';
+			// document.getElementById("filter_image").style.display = 'none';
+			document.getElementById('zoomin_image').style.display = 'none';			
+			document.body.style.backgroundImage = 'url(./picture/Gray_Background.jpg)';
+			clearInterval(checkConnectionInterval);
+		});
+		
+
+		var ColorModelForm_Topic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/ColorModelForm_Topic',
+			messageType: 'tku_msgs/ButtonColorForm'
+		});
+		var ColorFormcmd = new ROSLIB.Message({
+			buildingmodel: false
+		});
+
+		var HSVValue_Topic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/HSVValue_Topic',
+			messageType: 'ysk_msgs/HSVValue'
+		});
+		var HSVValuecmd = new ROSLIB.Message({
+			hmax: 180,
+			hmin: 0,
+			smax: 255,
+			smin: 0,
+			vmax: 255,
+			vmin: 0
+		});
+
+		var YUVValue_Topic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/YUVValue_Topic',
+			messageType: 'ysk_msgs/YUVValue'
+		});
+		var YUVValuecmd = new ROSLIB.Message({
+			ymin: 0,
+			ymax: 255,
+			crmin: 0,
+			crmax: 255,
+			cbmin: 0,
+			cbmax: 255
+		});
+		
+		var Head_Topic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/package/HeadMotor',
+			messageType: 'tku_msgs/HeadPackage'
+		});
+		var HeadPackagecmd = new ROSLIB.Message({
+			id: 0,
+			position: 511,
+			speed: 10
+		});
+		var SaveCamera = new ROSLIB.Topic({
+			ros: ros,
+			name: '/Camera_Save', // Change this to the actual topic name
+			messageType: 'ysk_msgs/CameraSave'
+		});
+		var SaveCameraMsg = new ROSLIB.Message({
+			brightness: 0.5,
+			contrast: 0.5,
+			saturation: 0.5,
+			whitebalance: 0.5,
+			autowhitebalance: false,
+			auto_exposure: false,
+			// autoBacklightCompensation: false
+		});
+
+		var Camera = new ROSLIB.Topic({
+			ros: ros,
+			name: '/Camera_Topic',
+			messageType: 'ysk_msgs/Camera'
+		});
+		var CameraMsg = new ROSLIB.Message({
+			brightness: 0.5,
+			contrast: 0.5,
+			saturation: 0.5,
+			whitebalance: 0.5,
+			autowhitebalance: false,
+			auto_exposure: false,
+			// autoBacklightCompensation: false
+		});
+
+		var ZoomInTopic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/Zoom_In_Topic',
+			messageType: 'ysk_msgs/Zoom'
+		});
+		var ZoomInMsg = new ROSLIB.Message({
+			zoomin : 1,
+		});
+
+		var WebStart_Topic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/web/start',
+			messageType: 'std_msgs/Bool'
+		});
+		var WebStartcmd = new ROSLIB.Message({
+			data: false
+		});
+		
+		var CameraId_Topic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/CameraId',
+			messageType: 'std_msgs/Int16'
+		});
+		var CameraId_msg = new ROSLIB.Message({
+			data: 0
+		});
+
+		var BuildStatus_Topic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/BuildStatus',
+			messageType: 'std_msgs/Int16'
+		});
+		var BuildStatus_msg = new ROSLIB.Message({
+			data: 0
+		});
+
+		var yuv_BuildStatus_Topic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/yuv_BuildStatus',
+			messageType: 'std_msgs/Int16'
+		});
+		var yuv_BuildStatus_msg = new ROSLIB.Message({
+			data: 0
+		});
+
+		var HSVClient = new ROSLIB.Service({
+			ros: ros,
+			name: '/LoadHSVInfo',
+			serviceType: 'ysk_msgs/HSVInfo'
+		});
+		var HSVreqrest = new ROSLIB.ServiceRequest({
+			colorlabel: "orange"
+		});
+
+		var YUVClient = new ROSLIB.Service({
+			ros: ros,
+			name: '/LoadYUVInfo',
+			serviceType: 'ysk_msgs/YUVInfo'
+		});
+		var YUVreqrest = new ROSLIB.ServiceRequest({
+			colorlabel: "orange"
+		});
+
+		var BuildClient = new ROSLIB.Service({
+			ros: ros,
+			name: '/BuildModel',
+			serviceType: 'ysk_msgs/BuildModel'
+		});
+		var Buildreqrest = new ROSLIB.ServiceRequest({
+			build: true
+		});
+
+		// var paramClient = new ROSLIB.Param({
+		// 	ros: ros,
+		// 	name: '/location'
+		// });
+
+		// var SaveHSVClient
+		// var SaveHSVreqrest
+
+		// paramClient.get(function(value) {
+		// 	console.log('/location 參數的值：', value);
+
+		var SaveHSVClient = new ROSLIB.Service({
+			ros: ros,
+			name: '/SaveHSV',
+			serviceType: 'ysk_msgs/SaveHSV'
+		});
+		var SaveHSVreqrest = new ROSLIB.ServiceRequest({
+			save: true,
+			// location:value
+		});
+
+		var SaveYUVClient = new ROSLIB.Service({
+			ros: ros,
+			name: '/SaveYUV',
+			serviceType: 'ysk_msgs/SaveYUV'
+		});
+		var SaveYUVreqrest = new ROSLIB.ServiceRequest({
+			save: true,
+		});
+		// });
+
+		var CameraInfoClient = new ROSLIB.Service({
+			ros: ros,
+			name: '/CameraInfo',
+			serviceType: 'ysk_msgs/CameraInfo'
+		});
+		var LoadCamerareqrest = new ROSLIB.ServiceRequest({
+			load: true
+		});
+
+		//-----
+		var connectFlag = false;
+		var myAddress = "172.17.121.10";
+		// var myAddress = "0.0.0.0";
+		// var myAddress = "localhost";
+
+		var B_SetupCamera_Flag = true;
+		var B_Start_Flag = true;
+
+		var hmin = 0;
+		var hmax = 180;
+		var smin = 0;
+		var smax = 255;
+		var bmin = 0;
+		var bmax = 255;
+
+		var ymin = 0;
+		var ymax = 255;
+		var crmin = 0;
+		var crmax = 255;
+		var cbmin = 0;
+		var cbmax = 255;
+
+		var CamBrightnessValue = 1;
+		var CamContrastValue = 100;
+		var CamSaturationValue = 50;
+		var CamWhiteBalanceValue = 4000;
+		var ZoomIn = 1;
+		var CamautowhitebalanceValue = false;
+		var Camauto_exposureValue = false;	
+
+		function enterAddress() {
+			if (connectFlag) {
+				ros.close();
+				connectFlag = false;
+			}
+
+			console.log("connect is", connectFlag);
+			myAddress = document.getElementById("addressSelect").value;
+			console.log("Connecting address is", myAddress);
+			
+
+			const state = ros.socket ? ros.socket.readyState : WebSocket.CLOSED;
+			// WebSocket.readyState: 0 CONNECTING, 1 OPEN, 2 CLOSING, 3 CLOSED
+			if (state === WebSocket.OPEN || state === WebSocket.CONNECTING || state === WebSocket.CLOSING) {				
+				ros.close();
+				console.log("state is",state);
+				ros.once('close', () => ros.connect("ws://"+myAddress+":9090")); // 等真正關完再連						
+		    } else{
+				// WebSocket 連線 (9090)
+				ros.connect("ws://"+myAddress+":9090");
+			}						
+
+			// 所有影像流都改用 myAddress（不要再用 0.0.0.0）
+			// document.getElementById("orign_image").src = "http://" + myAddress + ":8080/stream?topic=/zoom_in";
+			document.getElementById("orign_image").src = "http://" + myAddress + ":8080/stream?topic=/camera1/image_raw";
+			// document.getElementById("orign_image").src = "http://" + myAddress + ":8080/stream?topic=/zed/zed_node/rgb_raw/image_raw_color";
+			
+			// document.getElementById("filter_image").src = "http://" + myAddress + ":8080/stream?topic=/build_image";
+			document.getElementById("color_image").src = "http://" + myAddress + ":8080/stream?topic=/processed_image";
+
+			document.getElementById("zoomin_image").src = "http://" + myAddress + ":8080/stream?topic=/zoom_in";
+			
+			strategylocation();
+		}
+
+		var location_strategy = new ROSLIB.Topic({
+			ros: ros,
+			name: '/location',
+			messageType: 'ysk_msgs/Location'
+		});
+		var location_msg = new ROSLIB.Message({
+			data: ""
+
+		});
+		function strategylocation() {
+			// 获取选定的值
+			location_msg.data = "/" + document.getElementById('strategy_location').value + "/Parameter";
+			console.log(`Selected strategy location: ${location_msg.data}`);
+			location_strategy.publish(location_msg);
+			changecolorlabel(document.getElementById("colorlabel").value);
+			changeYUVcolorlabel(document.getElementById("yuv_colorlabel").value);			
+			// 这里可以根据需要发送请求或执行其他操作
+			CameraInfoClient.callService(LoadCamerareqrest, function (LoadCameraresult) {
+				console.log("white_balance: ", LoadCameraresult.white_balance);
+				console.log("auto_white_balance: ", LoadCameraresult.auto_white_balance);
+				console.log("auto_exposure: ", LoadCameraresult.auto_exposure);
+				console.log("LoadCameraresult: ", LoadCameraresult);
+				CamBrightnessValue = LoadCameraresult.brightness;
+				CamContrastValue = LoadCameraresult.contrast;
+				CamSaturationValue = LoadCameraresult.saturation;
+				CamWhiteBalanceValue = LoadCameraresult.white_balance;
+				CamautowhitebalanceValue = LoadCameraresult.auto_white_balance;
+				Camauto_exposureValue = LoadCameraresult.auto_exposure;
+				
+				document.getElementById("CamBrightness").value = CamBrightnessValue;
+				document.getElementById("CamBrightnessValue").value = CamBrightnessValue;
+				document.getElementById("CamContrast").value = CamContrastValue;
+				document.getElementById("CamContrastValue").value = CamContrastValue;
+				document.getElementById("CamSaturation").value = CamSaturationValue;
+				document.getElementById("CamSaturationValue").value = CamSaturationValue;
+				document.getElementById("CamWhiteBalance").value = CamWhiteBalanceValue;
+				document.getElementById("CamWhiteBalanceValue").value = CamWhiteBalanceValue;
+				document.getElementById("AutoWhitBlance").checked = CamautowhitebalanceValue;
+				document.getElementById("auto_exposure").checked = Camauto_exposureValue;
+
+				CameraMsg.brightness = Number(CamBrightnessValue);
+				CameraMsg.contrast = Number(CamContrastValue);
+				CameraMsg.saturation = Number(CamSaturationValue);
+				CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+				CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+				CameraMsg.auto_exposure = Camauto_exposureValue;
+				Camera.publish(CameraMsg);
+			});
+		}
+
+		var locationBack_Subscriber = new ROSLIB.Topic({
+			ros: ros,
+			name: '/locationBack',
+			messageType: 'ysk_msgs/Location'
+		});
+		function locationBack(){
+			locationBack_Subscriber.subscribe(function (msg)
+			{
+				console.log("locationBack:"+ msg.data)
+				document.getElementById('strategy_location').value = msg.data;
+				changecolorlabel(document.getElementById("colorlabel").value);
+				changeYUVcolorlabel(document.getElementById("yuv_colorlabel").value)
+			});			
+		}
+		
+
+		function LoadCamera(){
+			changecolorlabel(document.getElementById("colorlabel").value);
+			changeYUVcolorlabel(document.getElementById("yuv_colorlabel").value)
+			// 这里可以根据需要发送请求或执行其他操作
+			CameraInfoClient.callService(LoadCamerareqrest, function (LoadCameraresult) {
+				console.log("white_balance: ", LoadCameraresult.white_balance);
+				console.log("auto_white_balance: ", LoadCameraresult.auto_white_balance);
+				console.log("auto_exposure: ", LoadCameraresult.auto_exposure);
+				console.log("LoadCameraresult: ", LoadCameraresult);
+				CamBrightnessValue = LoadCameraresult.brightness;
+				CamContrastValue = LoadCameraresult.contrast;
+				CamSaturationValue = LoadCameraresult.saturation;
+				CamWhiteBalanceValue = LoadCameraresult.white_balance;
+				CamautowhitebalanceValue = LoadCameraresult.auto_white_balance;
+				Camauto_exposureValue = LoadCameraresult.auto_exposure;
+				
+				document.getElementById("CamBrightness").value = CamBrightnessValue;
+				document.getElementById("CamBrightnessValue").value = CamBrightnessValue;
+				document.getElementById("CamContrast").value = CamContrastValue;
+				document.getElementById("CamContrastValue").value = CamContrastValue;
+				document.getElementById("CamSaturation").value = CamSaturationValue;
+				document.getElementById("CamSaturationValue").value = CamSaturationValue;
+				document.getElementById("CamWhiteBalance").value = CamWhiteBalanceValue;
+				document.getElementById("CamWhiteBalanceValue").value = CamWhiteBalanceValue;
+				document.getElementById("AutoWhitBlance").checked = CamautowhitebalanceValue;
+				document.getElementById("auto_exposure").checked = Camauto_exposureValue;
+
+				CameraMsg.brightness = Number(CamBrightnessValue);
+				CameraMsg.contrast = Number(CamContrastValue);
+				CameraMsg.saturation = Number(CamSaturationValue);
+				CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+				CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+				CameraMsg.auto_exposure = Camauto_exposureValue;
+				Camera.publish(CameraMsg);
+			});
+		}
+		// http://0.0.0.0:8080/stream_viewer?topic=/image_raw
+
+		function SelectBuildFunction(){
+			var build_value = document.getElementById("build-select").value;
+			console.log("SelectBuildFunction value is ", build_value);
+			if(build_value == "All_color_build"){
+				BuildStatus_msg.data = 0;
+				BuildStatus_Topic.publish(BuildStatus_msg);
+				console.log("All_color_build");
+			}
+			else if(build_value == "Single_color_build"){
+				BuildStatus_msg.data = 1;
+				BuildStatus_Topic.publish(BuildStatus_msg);
+				console.log("Single_color_build");
+			}
+		}
+
+		function ResetColorModelFunction() {
+			document.getElementById("hminRange").value = 0;
+			document.getElementById("sminRange").value = 0;
+			document.getElementById("bminRange").value = 0;
+			document.getElementById("hmaxRange").value = 180;
+			document.getElementById("smaxRange").value = 255;
+			document.getElementById("bmaxRange").value = 255;
+			document.getElementById("hminValue").value = 0;
+			document.getElementById("sminValue").value = 0;
+			document.getElementById("bminValue").value = 0;
+			document.getElementById("hmaxValue").value = 180;
+			document.getElementById("smaxValue").value = 255;
+			document.getElementById("bmaxValue").value = 255;
+			hmin = 0;
+			hmax = 180;
+			smin = 0;
+			smax = 255;
+			bmin = 0;
+			bmax = 255;
+			HSVValuecmd.hmax = Number(hmax);
+			HSVValuecmd.hmin = Number(hmin);
+			HSVValuecmd.smax = Number(smax);
+			HSVValuecmd.smin = Number(smin);
+			HSVValuecmd.vmax = Number(bmax);
+			HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+			console.log("ResetColorModelFunction");
+		}
+		function CloseColorModelFunction() {
+			document.getElementById("hminRange").value = 0;
+			document.getElementById("sminRange").value = 0;
+			document.getElementById("bminRange").value = 0;
+			document.getElementById("hmaxRange").value = 0;
+			document.getElementById("smaxRange").value = 0;
+			document.getElementById("bmaxRange").value = 0;
+			document.getElementById("hminValue").value = 0;
+			document.getElementById("sminValue").value = 0;
+			document.getElementById("bminValue").value = 0;
+			document.getElementById("hmaxValue").value = 0;
+			document.getElementById("smaxValue").value = 0;
+			document.getElementById("bmaxValue").value = 0;
+			hmin = 0;
+			hmax = 0;
+			smin = 0;
+			smax = 0;
+			bmin = 0;
+			bmax = 0;
+			HSVValuecmd.hmax = Number(hmax);
+			HSVValuecmd.hmin = Number(hmin);
+			HSVValuecmd.smax = Number(smax);
+			HSVValuecmd.smin = Number(smin);
+			HSVValuecmd.vmax = Number(bmax);
+			HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+			console.log("CloseColorModelFunction");
+		}
+
+		function ResetYUVColorModelFunction() {
+			document.getElementById("YminRange").value = 0;
+			// document.getElementById("CrminRange").value = 0;
+			// document.getElementById("CbminRange").value = 0;
+			document.getElementById("YmaxRange").value = 255;
+			// document.getElementById("CrmaxRange").value = 255;
+			// document.getElementById("CbmaxRange").value = 255;
+			document.getElementById("YminValue").value = 0;
+			document.getElementById("CrminValue").value = 0;
+			document.getElementById("CbminValue").value = 0;
+			document.getElementById("YmaxValue").value = 255;
+			document.getElementById("CrmaxValue").value = 255;
+			document.getElementById("CbmaxValue").value = 255;
+			ymin = 0;
+			ymax = 255;
+			crmin = 0;
+			crmax = 255;
+			cbmin = 0;
+			cbmax = 255;
+			// HSVValuecmd.hmax = Number(hmax);
+			// HSVValuecmd.hmin = Number(hmin);
+			// HSVValuecmd.smax = Number(smax);
+			// HSVValuecmd.smin = Number(smin);
+			// HSVValuecmd.vmax = Number(bmax);
+			// HSVValuecmd.vmin = Number(bmin);
+			YUVValue_Topic.publish(YUVValuecmd);
+			console.log("ResetYUVColorModelFunction");
+			updateYUVPreview();
+		}
+		function CloseYUVColorModelFunction() {	
+			document.getElementById("YminRange").value = 0;
+			// document.getElementById("CrminRange").value = 0;
+			// document.getElementById("CbminRange").value = 0;
+			document.getElementById("YmaxRange").value = 0;
+			// document.getElementById("CrmaxRange").value = 0;
+			// document.getElementById("CbmaxRange").value = 0;
+			document.getElementById("YminValue").value = 0;
+			document.getElementById("CrminValue").value = 128;
+			document.getElementById("CbminValue").value = 128;
+			document.getElementById("YmaxValue").value = 0;
+			document.getElementById("CrmaxValue").value = 128;
+			document.getElementById("CbmaxValue").value =128;
+			ymin = 0;
+			ymax = 0;
+			crmin = 128;
+			crmax = 128;
+			cbmin = 128;
+			cbmax = 128;
+			// HSVValuecmd.hmax = Number(hmax);
+			// HSVValuecmd.hmin = Number(hmin);
+			// HSVValuecmd.smax = Number(smax);
+			// HSVValuecmd.smin = Number(smin);
+			// HSVValuecmd.vmax = Number(bmax);
+			// HSVValuecmd.vmin = Number(bmin);
+			YUVValue_Topic.publish(YUVValuecmd);
+			console.log("CloseYUVColorModelFunction");
+			updateYUVPreview();
+		}
+
+		function SaveColorModelFunction() {
+			// SaveHSVreqrest = new ROSLIB.ServiceRequest({
+			// 	save: true,
+			// 	location: value
+			// });
+			console.log("SaveColorModelFunction");
+			SaveHSVreqrest.save = true;
+			document.getElementById("SaveColorModel").disabled = "disabled";
+			SaveHSVClient.callService(SaveHSVreqrest, function (SaveHSVresult) {
+				if (SaveHSVresult.already == true) {
+					document.getElementById("SaveColorModel").disabled = false;
+				}
+			});
+		}
+		function SaveYUVColorModelFunction() {
+			console.log("SaveYUVColorModelFunction");
+			SaveYUVreqrest.save = true;
+			document.getElementById("SaveYUVColorModel").disabled = "disabled";
+			SaveYUVClient.callService(SaveYUVreqrest, function (SaveYUVresult) {
+				if (SaveYUVresult.already == true) {
+					document.getElementById("SaveYUVColorModel").disabled = false;
+				}
+			});
+		}
+		function BuildColorModelFunction() {
+			console.log("BuildColorModelFunction");
+			Buildreqrest.build = true;
+			console.log("build is = ", Buildreqrest.already);
+			document.getElementById("BuildColorModel").disabled = "disabled";
+			BuildClient.callService(Buildreqrest, function (Buildresult) {
+				if (Buildresult.already == true) {
+					document.getElementById("BuildColorModel").disabled = false;
+				}
+			});
+		}
+		function ColorModelForm() {
+			console.log("Torque");
+			// document.getElementById("B_ColorModelForm").value = "Close Model Form";
+			// document.getElementById("container").style.height = "710px";
+			// document.getElementById("select").style.height = "400px";
+			// changecolorlabel(document.getElementById("colorlabel").value);
+			ColorFormcmd.buildingmodel = true;
+			ColorModelForm_Topic.publish(ColorFormcmd);
+			// } else {
+			// 	document.getElementById("HSV_Range").style.display = "none";
+			// 	document.getElementById("B_ColorModelForm").value = "Show Model Form";
+			// 	if (B_SetupCamera_Flag == false) {
+			// 		document.getElementById("container").style.height = "810px";
+			// 		document.getElementById("select").style.height = "400px";
+			// 	} else {
+			// 		document.getElementById("container").style.height = "710	px";
+			// 		document.getElementById("select").style.height = "400px";
+			// 	}
+			// 	ColorFormcmd.buildingmodel = false;
+			// 	ColorModelForm_Topic.publish(ColorFormcmd);
+			// }
+		}
+		function CameraSave() {
+			console.log("CameraSave");
+			document.getElementById("CamBrightness").value = CamBrightnessValue;
+			document.getElementById("CamBrightnessValue").value = CamBrightnessValue;
+			document.getElementById("CamContrast").value = CamContrastValue;
+			document.getElementById("CamContrastValue").value = CamContrastValue;
+			document.getElementById("CamSaturation").value = CamSaturationValue;
+			document.getElementById("CamSaturationValue").value = CamSaturationValue;
+			document.getElementById("CamWhiteBalance").value = CamWhiteBalanceValue;
+			document.getElementById("CamWhiteBalanceValue").value = CamWhiteBalanceValue;
+			document.getElementById("AutoWhitBlance").checked = CamautowhitebalanceValue;
+			document.getElementById("auto_exposure").checked = Camauto_exposureValue;			
+			SaveCameraMsg.brightness = Number(CamBrightnessValue);
+			SaveCameraMsg.contrast = Number(CamContrastValue);
+			SaveCameraMsg.saturation = Number(CamSaturationValue);
+			SaveCameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			SaveCameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			SaveCameraMsg.auto_exposure = Camauto_exposureValue;
+			SaveCamera.publish(SaveCameraMsg);
+		}
+		
+		function changebuild(newValue) {
+			console.log(newValue)
+			var build_value = document.getElementById("build-select").value;
+			console.log("SelectBuildFunction value is ", build_value);
+			if(build_value == "All_color_build"){
+				BuildStatus_msg.data = 0;
+				BuildStatus_Topic.publish(BuildStatus_msg);
+				console.log("All_color_build");
+			}
+			else if(build_value == "Single_color_build"){
+				BuildStatus_msg.data = 1;
+				BuildStatus_Topic.publish(BuildStatus_msg);
+				console.log("Single_color_build");
+			}
+		}
+		function changeYUVbuild(newValue) {
+			console.log(newValue)
+			var yuv_build_value = document.getElementById("yuv-build-select").value;
+			console.log("yuv_SelectBuildFunction value is ", yuv_build_value);
+			if(yuv_build_value == "yuv_All_color_build"){
+				yuv_BuildStatus_msg.data = 0;
+				yuv_BuildStatus_Topic.publish(yuv_BuildStatus_msg);
+				console.log("yuv_All_color_build");
+			}
+			else if(yuv_build_value == "yuv_Single_color_build"){
+				yuv_BuildStatus_msg.data = 1;
+				yuv_BuildStatus_Topic.publish(yuv_BuildStatus_msg);
+				console.log("yuv_Single_color_build");
+			}
+		}
+		function changecolorlabel(newValue) {
+			// console.log(newValue);
+			HSVreqrest.colorlabel = String(newValue); // 直接轉換為字串
+			// console.log(typeof HSVreqrest.colorlabel, HSVreqrest.colorlabel);
+			// console.log(HSVreqrest.colorlabel);
+			HSVClient.callService(HSVreqrest, function (HSVresult) {
+				document.getElementById("hminRange").value = HSVresult.hmin;
+				console.log("hminRange = ", HSVresult.hmin);
+				document.getElementById("sminRange").value = HSVresult.smin;
+				console.log("sminRange = ", HSVresult.smin);
+				document.getElementById("bminRange").value = HSVresult.vmin;
+				console.log("bminRange = ", HSVresult.vmin);
+				document.getElementById("hmaxRange").value = HSVresult.hmax;
+				console.log("hmaxRange = ", HSVresult.hmax);
+				document.getElementById("smaxRange").value = HSVresult.smax;
+				console.log("smaxRange = ", HSVresult.smax);
+				document.getElementById("bmaxRange").value = HSVresult.vmax;
+				console.log("bmaxRange = ", HSVresult.vmax);
+				document.getElementById("hminValue").value = HSVresult.hmin;
+				document.getElementById("sminValue").value = HSVresult.smin;
+				document.getElementById("bminValue").value = HSVresult.vmin;
+				document.getElementById("hmaxValue").value = HSVresult.hmax;
+				document.getElementById("smaxValue").value = HSVresult.smax;
+				document.getElementById("bmaxValue").value = HSVresult.vmax;
+				HSVValuecmd.hmin = Number(document.getElementById("hminValue").value);
+				HSVValuecmd.hmax = Number(document.getElementById("hmaxValue").value);
+				HSVValuecmd.smin = Number(document.getElementById("sminValue").value);
+				HSVValuecmd.smax = Number(document.getElementById("smaxValue").value);
+				HSVValuecmd.vmin = Number(document.getElementById("bminValue").value);
+				HSVValuecmd.vmax = Number(document.getElementById("bmaxValue").value);
+				HSVValue_Topic.publish(HSVValuecmd);
+			});
+		}
+		function changeYUVcolorlabel(newValue) {
+			YUVreqrest.colorlabel = String(newValue); // 直接轉換為字串
+			YUVClient.callService(YUVreqrest, function (YUVresult) {
+				document.getElementById("YminRange").value = YUVresult.ymin;
+				console.log("YminRange = ", YUVresult.ymin);
+				document.getElementById("YmaxRange").value = YUVresult.ymax;
+				console.log("YmaxRange = ", YUVresult.ymax);
+				document.getElementById("YminValue").value = YUVresult.ymin;
+				document.getElementById("CrminValue").value = YUVresult.crmin;
+				document.getElementById("CbminValue").value = YUVresult.cbmin;
+				document.getElementById("YmaxValue").value = YUVresult.ymax;
+				document.getElementById("CrmaxValue").value = YUVresult.crmax;
+				document.getElementById("CbmaxValue").value = YUVresult.cbmax;
+				YUVValuecmd.ymin = Number(document.getElementById("YminValue").value);
+				YUVValuecmd.ymax = Number(document.getElementById("YmaxValue").value);
+				YUVValuecmd.crmin = Number(document.getElementById("CrminValue").value);
+				YUVValuecmd.crmax = Number(document.getElementById("CrmaxValue").value);
+				YUVValuecmd.cbmin = Number(document.getElementById("CbminValue").value);
+				YUVValuecmd.cbmax = Number(document.getElementById("CbmaxValue").value);
+				YUVValue_Topic.publish(YUVValuecmd);
+			});
+		}
+		function showhminValue(newValue) {
+			document.getElementById("hminValue").value = newValue;
+			hmin = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+
+		function rangehminValue(newValue) {
+			document.getElementById("hminRange").value = newValue;
+			hmin = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+		function showhmaxValue(newValue) {
+			document.getElementById("hmaxValue").value = newValue;
+			hmax = newValue;
+			HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+
+		function rangehmaxValue(newValue) {
+			document.getElementById("hmaxRange").value = newValue;
+			hmax = newValue;
+			HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+		function showsminValue(newValue) {
+			document.getElementById("sminValue").value = newValue;
+			smin = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+
+		function rangesminValue(newValue) {
+			document.getElementById("sminRange").value = newValue;
+			smin = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+		function showsmaxValue(newValue) {
+			document.getElementById("smaxValue").value = newValue;
+			smax = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+
+		function rangesmaxValue(newValue) {
+			document.getElementById("smaxRange").value = newValue;
+			smax = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+		function showbminValue(newValue) {
+			document.getElementById("bminValue").value = newValue;
+			bmin = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+
+		function rangebminValue(newValue) {
+			document.getElementById("bminRange").value = newValue;
+			bmin = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			//HSVValuecmd.vmax = Number(bmax);
+			HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+		function showbmaxValue(newValue) {
+			document.getElementById("bmaxValue").value = newValue;
+			bmax = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+
+		function rangebmaxValue(newValue) {
+			document.getElementById("bmaxRange").value = newValue;
+			bmax = newValue;
+			//HSVValuecmd.hmax = Number(hmax);
+			//HSVValuecmd.hmin = Number(hmin);
+			//HSVValuecmd.smax = Number(smax);
+			//HSVValuecmd.smin = Number(smin);
+			HSVValuecmd.vmax = Number(bmax);
+			//HSVValuecmd.vmin = Number(bmin);
+			HSVValue_Topic.publish(HSVValuecmd);
+		}
+
+		function rangeYUVValue() {
+		// 	//Ymin, Ymax, Crmin, Crmax, Cbmin, Cbmax			
+			document.getElementById("YminRange").value = document.getElementById("YminValue").value;
+			document.getElementById("YmaxRange").value = document.getElementById("YmaxValue").value;
+			YUVValuecmd.ymax = Number(ymax);
+			YUVValuecmd.ymin = Number(ymin);
+			YUVValuecmd.crmax = Number(crmax);
+			YUVValuecmd.crmin = Number(crmin);
+			YUVValuecmd.cbmax = Number(cbmax);
+			YUVValuecmd.cbmin = Number(cbmin);
+			YUVValue_Topic.publish(YUVValuecmd);
+		}
+		function showYUVValue() {
+			document.getElementById("YminValue").value = document.getElementById("YminRange").value;
+			document.getElementById("YmaxValue").value = document.getElementById("YmaxRange").value;
+			YUVValuecmd.ymax = Number(ymax);
+			YUVValuecmd.ymin = Number(ymin);
+			YUVValuecmd.crmax = Number(crmax);
+			YUVValuecmd.crmin = Number(crmin);
+			YUVValuecmd.cbmax = Number(cbmax);
+			YUVValuecmd.cbmin = Number(cbmin);
+			YUVValue_Topic.publish(YUVValuecmd);
+		}
+		function showCamBrightness(newValue) {
+			document.getElementById("CamBrightnessValue").value = newValue;
+			CamBrightnessValue = newValue;
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+
+		}
+		function rangeCamBrightnessValue(newValue) {
+			document.getElementById("CamBrightness").value = newValue;
+			CamBrightnessValue = newValue;
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+		}
+		function showCamContrast(newValue) {
+			document.getElementById("CamContrastValue").value = newValue;
+			CamContrastValue = newValue;
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+
+		}
+		function rangeCamContrastValue(newValue) {
+			document.getElementById("CamContrast").value = newValue;
+			CamContrastValue = newValue;
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+		}
+		function showCamSaturation(newValue) {
+			document.getElementById("CamSaturationValue").value = newValue;
+			CamSaturationValue = newValue;
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+
+		}
+		function rangeCamSaturationValue(newValue) {
+			document.getElementById("CamSaturation").value = newValue;
+			CamSaturationValue = newValue;
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+		}
+		function showCamWhiteBalance(newValue) {
+			document.getElementById("CamWhiteBalanceValue").value = newValue;
+			CamWhiteBalanceValue = newValue;
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+		}
+		function rangeCamWhiteBalanceValue(newValue) {
+			document.getElementById("CamWhiteBalance").value = newValue;
+			CamWhiteBalanceValue = newValue;
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+		}
+
+		function showZoomIn(newValue) {
+			document.getElementById("ZoomInValue").value = newValue;
+			ZoomIn = newValue;
+			ZoomInMsg.zoomin = Number(ZoomIn)
+			ZoomInTopic.publish(ZoomInMsg);
+		}
+		function rangeZoomIn(newValue) {
+			document.getElementById("ZoomIn").value = newValue;
+			ZoomIn = newValue;
+			ZoomInMsg.zoomin = Number(ZoomIn)
+			ZoomInTopic.publish(ZoomInMsg);
+		}
+		
+		function changeAutoWhitBlance() {
+			if (document.getElementById("AutoWhitBlance").checked) {
+				CamautowhitebalanceValue = true;
+			} else {
+				CamautowhitebalanceValue = false;
+			}
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+		}
+		function changeauto_exposure() {
+			if (document.getElementById("auto_exposure").checked) {
+				Camauto_exposureValue = true;
+			} else {
+				Camauto_exposureValue = false;
+			}
+			CameraMsg.brightness = Number(CamBrightnessValue);
+			CameraMsg.contrast = Number(CamContrastValue);
+			CameraMsg.saturation = Number(CamSaturationValue);
+			CameraMsg.whitebalance = Number(CamWhiteBalanceValue);
+			CameraMsg.autowhitebalance = CamautowhitebalanceValue;
+			CameraMsg.auto_exposure = Camauto_exposureValue;
+			Camera.publish(CameraMsg);
+		}
+		function WebStart() {
+			if (B_Start_Flag) {
+				document.getElementById("B_Start").value = "Finsh";
+				changecolorlabel(document.getElementById("colorlabel").value);			
+				B_Start_Flag = false;
+				WebStartcmd.data = true;
+				WebStart_Topic.publish(WebStartcmd);
+			} else {
+				document.getElementById("B_Start").value = "Start";
+				B_Start_Flag = true;
+				WebStartcmd.data = false;
+				WebStart_Topic.publish(WebStartcmd);
+			}
+		}
+		function showHorizontalPosition(newValue) {
+			document.getElementById("HorizontalPositionValue").value = newValue;
+			HeadPackagecmd.id = Number(1);
+			HeadPackagecmd.position = Number(document.getElementById("HorizontalPositionValue").value);
+			HeadPackagecmd.speed = Number(document.getElementById("HorizontalSpeedValue").value);
+			Head_Topic.publish(HeadPackagecmd);
+		}
+
+		function rangeHorizontalPosition(newValue) {
+			document.getElementById("HorizontalPositionValue").value = newValue;
+			HeadPackagecmd.id = Number(1);
+			HeadPackagecmd.position = Number(document.getElementById("HorizontalPositionValue").value);
+			HeadPackagecmd.speed = Number(document.getElementById("HorizontalSpeedValue").value);
+			Head_Topic.publish(HeadPackagecmd);
+		}
+		function showHorizontalSpeed(newValue) {
+			document.getElementById("HorizontalSpeedValue").value = newValue;
+			HeadPackagecmd.id = Number(1);
+			HeadPackagecmd.position = Number(document.getElementById("HorizontalPositionValue").value);
+			HeadPackagecmd.speed = Number(document.getElementById("HorizontalSpeedValue").value);
+			Head_Topic.publish(HeadPackagecmd);
+		}
+
+		function rangeHorizontalSpeed(newValue) {
+			document.getElementById("HorizontalSpeedValue").value = newValue;
+			HeadPackagecmd.id = Number(1);
+			HeadPackagecmd.position = Number(document.getElementById("HorizontalPositionValue").value);
+			HeadPackagecmd.speed = Number(document.getElementById("HorizontalSpeedValue").valutde);
+			Head_Topic.publish(HeadPackagecmd);
+		}
+		function showVerticalPosition(newValue) {
+			document.getElementById("VerticalPositionValue").value = newValue;
+			HeadPackagecmd.id = Number(2);
+			HeadPackagecmd.position = Number(document.getElementById("VerticalPositionValue").value);
+			HeadPackagecmd.speed = Number(document.getElementById("VerticalSpeedValue").value);
+			Head_Topic.publish(HeadPackagecmd);
+		}
+
+		function rangeVerticalPosition(newValue) {
+			document.getElementById("VerticalPositionValue").value = newValue;
+			HeadPackagecmd.id = Number(2);
+			HeadPackagecmd.position = Number(document.getElementById("VerticalPositionValue").value);
+			HeadPackagecmd.speed = Number(document.getElementById("VerticalSpeedValue").value);
+			Head_Topic.publish(HeadPackagecmd);
+		}
+		function showVerticalSpeed(newValue) {
+			document.getElementById("VerticalSpeedValue").value = newValue;
+			HeadPackagecmd.id = Number(2);
+			HeadPackagecmd.position = Number(document.getElementById("VerticalPositionValue").value);
+			HeadPackagecmd.speed = Number(document.getElementById("VerticalSpeedValue").value);
+			Head_Topic.publish(HeadPackagecmd);
+
+		}
+
+		function rangeVerticalSpeed(newValue) {
+			document.getElementById("VerticalSpeedValue").value = newValue;
+			HeadPackagecmd.id = Number(2);
+			HeadPackagecmd.position = Number(document.getElementById("VerticalPositionValue").value);
+			HeadPackagecmd.speed = Number(document.getElementById("VerticalSpeedValue").value);
+			Head_Topic.publish(HeadPackagecmd);
+		}
+		function changeCamera() {
+			CameraId_msg.data = Number(document.getElementById("Camera_Select").value);
+			CameraId_Topic.publish(CameraId_msg);
+		}
+	</script>
+	<style type="text/css">
+		body {
+			width: 1520px;
+			height: 1000px;
+			overflow: visible;
+			background-image: url(./picture/Gray_Background.jpg);
+			background-size: cover;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+		}
+
+
+		#container {
+			background-color: #333;
+			border: 2px black solid;
+			width: 1450px;
+			height: 710px;
+			margin: 20px auto;
+			overflow: visible;
+			color: white;
+		}
+
+		#div_orign_image {
+			width: 320px;
+			height: 240px;
+			border: 1px #FFF solid;
+			margin: 15px 20px 15px 20px;
+			float: left;
+			display: inline;
+		}
+
+		#div_color_image {
+			width: 320px;
+			height: 240px;
+			border: 1px #FFF solid;
+			margin: 15px 20px 15px 20px;
+			float: right;
+			display: inline;
+		}
+		
+		#div_zoomin_image {
+			width: 320px;
+			height: 240px;
+			border: 1px #FFF solid;
+			margin: 15px 20px 15px 20px;
+			float: left;
+			display: inline;
+		}
+
+		/* #div_filter_image {
+			width: 320px;
+			height: 240px;
+			border: 1px #FFF solid;
+			margin: 25px 42px 24px 32px;
+			float: right;
+			display: inline;
+		} */
+
+		#HSV_Range {
+			width: 320px;
+			height: 400px;
+			border: 1px #FFF solid;
+			margin: 10px 20px 0px 0px;/*上右下左*/
+			float: right;
+			display: inline;
+		}
+		#YUV_Range {
+			width: 320px;
+			height: 400px;
+			border: 1px #FFF solid;
+			margin: 10px 40px 0px 0px;/*上右下左*/
+			float: right;
+			display: inline;
+		}
+
+		#select {
+			width: 320px;
+			height: 400px;
+			margin: 10px 20px 0px 32px;
+			float: left;
+			display: inline;
+		}
+		#strategy_order {
+			width: 320px;
+			height: 400px;
+			border: 1px #FFF solid;
+			margin: 10px 0px 0px 10px;  /* 靠近中間，不要再 +32px 了，跟左邊錯開就好 */
+			float: left;
+			display: inline;
+		}
+
+		#strategy_order .order-item {
+			background: rgba(0,0,0,0.15);
+			border: 1px solid #666;
+			border-radius: 4px;
+			padding: 4px 6px;
+			margin-bottom: 4px;
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+
+		#strategy_order .item-label {
+			flex: 1;
+			font-size: 12px;
+		}
+
+		#strategy_order .mini-btn {
+			background: #444;
+			color: #fff;
+			border: 0;
+			border-radius: 4px;
+			padding: 2px 8px;
+			font-size: 12px;
+			cursor: pointer;
+		}
+
+		#strategy_order .mini-btn:hover {
+			background: #666;
+		}
+
+		#strategy_order ul {
+		width: auto;
+		}
+		#strategy_order ul li.order-item {
+		width: auto;
+		}
+		#strategy_order_left {
+		display: flex;
+		flex-wrap: wrap;        /* 允許換行 */
+		justify-content: center;
+		align-items: center;    /* 不要上下拉伸 */
+		gap: 6px;
+		overflow-x: hidden;     /* 不要出現左右拉條 */
+		}
+		#strategy_order_left .order-item {
+		flex: 0 0 auto;         /* 保持原本小小一顆 */
+		}
+
+		/* 已選（可排序）整欄撐滿 */
+		#strategy_order_right {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		align-items: stretch;     /* ← 撐到最寬 */
+		}
+
+		#strategy_order_right .order-item {
+		width: 100% !important;   /* ← 真的撐滿那 650px */
+		box-sizing: border-box;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		}
+
+
+		#build_select {
+			width: 320px;
+			height: 400px;
+			margin: 10px 40px 0px 30px;
+			float: right;
+			display: inline;
+		}
+
+		#header {
+			text-align: center;
+			color: #FFFFFF;
+			margin-top: 13px;
+		}
+
+		.text {
+			margin: 1px 1px 1px 5px;
+			font-size: 12px;
+		}
+
+		.ValueText {
+			width: 38px;
+			height: 20px;
+		}
+
+		.Range {
+			width: 225px;
+			height: 10px;
+			margin: 6px 2px 6px 2px;
+
+		}
+
+		/* #B_ColorModelForm {
+			width: 25px;
+		} */
+
+		#Camera {
+			display: inline;
+		}
+
+		#B_Start {
+			width: 50px;
+		}
+
+	</style>
+	<title>HumanoidInterface</title>
+
+	<!-- 先載入值 -->
+	<script src="strategy_autoload.js"></script>
+
+	<script>
+	window.addEventListener('DOMContentLoaded', function () {
+		document.getElementById('strategy_location').value = window._strategy_location;
+		console.log('location:' + window._strategy_location)
+		LoadCamera()
+	});
+	</script>
+	
+</head>
+
+<body>
+	<!-- NAV BAR -->
+	<ul>
+		<li><a target="_blank" class="navbarright" href="WalkingInterface.html">Walking</a></li>
+        <li><a target="_blank" class="navbarright" href="MotionControlInterface.html">Motion</a></li>
+        <li><a target="_blank" style="text-decoration: underline;" class="navbarright" href="ImageProcessInterface.html">ImageProcess</a></li>
+        <li><a target="_blank" class="navbarright" href="PIDcontroll.html">PIDcontroll</a></li>
+		<li class="logo">
+			<a target="_blank" href="index.html" class="logo"><img id="logoimg" src="./resources/TKU_ICLab/iclablogo-02.png"></a>
+		</li>
+	</ul>
+	<br />
+	<p id="connected" style="color:#00D600; display:none; font-size: 20px;">
+		Connected
+	</p>
+	<form>
+
+		<div id="head" align="center">
+			<h1 id="header">Humanoid Interface</h1>
+			<table>
+				<tr>
+					<td>
+						<select style="height:25px; margin-right: 5px;" id="addressSelect">
+							<option value="localhost">localhost</option>
+							<option value="172.17.121.10">172.17.121.10</option>							
+						</select>
+					</td>
+					<td>
+						<button type="button" style="width:110px ;height:25px;" id="changeAddressButton" onclick="enterAddress()">Enter Address</button>
+					</td>
+					<td>
+						<select style="height:25px; margin-right: 5px;" id="strategy_location" >
+							<option value="ar">ar</option>
+							<option value="bb">bb</option>
+							<option value="mar">mar </option>
+							<option value="obs">obs </option>
+							<option value="wl">wl</option>
+							<option value="sr">sr</option>
+							<option value="sp">sp</option>\
+						</select>
+					</td>
+					<td>
+						<button type="button" style="width:110px ;height:25px;" id="changelocationButton" onclick="strategylocation()">location_load</button>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div id="container" align="center">
+			<!-- <div id="div_orign_image"> -->
+				<!-- <img id="orign_image" style="-webkit-user-select: none; display:inline;" src="http://0.0.0.0:8080/stream_viewer?topic=/image_raw"> -->
+				<!-- <img id="orign_image" style="-webkit-user-select: none; display:inline;" src="http://localhost:8080/stream_viewer?topic=/zed/zed_node/left/image_rect_color/compressed"/> -->
+			<div id="div_orign_image">
+				<img
+					id="orign_image"
+					style="width:320px; height:240px; display:inline-block;"
+
+					src = "http://localhost:8080/stream?topic=/camera1/image_raw"
+				/>
+				<!-- src="http://0.0.0.0:8080/stream?topic=/zed/zed_node/right/image_rect_color&image_transport=compressed"					 -->
+
+			</div>
+			<!-- </div>src="http://0.0.0.0:8080/stream?topic=/zoom_in"	 -->
+				<div id="div_zoomin_image">
+				<img 
+					id="zoomin_image" 
+					style="width:320px; height:240px; display:inline-block;" 
+					src="http://localhost:8080/stream?topic=/zoom_in"					
+					alt="Processed Image Stream"
+				/>
+			</div>
+
+			<div id="div_color_image">
+				<img 
+					id="color_image" 
+					style="width:320px; height:240px; display:inline-block;" 
+src="http://localhost:8080/stream?topic=/processed_image"
+					
+					alt="Processed Image Stream"
+				/>
+			</div>
+			<div id="div_color_image">
+				<img 
+					id="color_image" 
+					style="width:320px; height:240px; display:inline-block;" 
+src="http://localhost:8080/stream?topic=/yuv_processed_image"
+					
+					alt="Processed Image Stream"
+				/>
+			</div>
+
+
+
+			<div id="HSV_Range">
+				<style>
+				table.control { border-collapse: collapse; width: auto; }
+				table.control td { padding: 4px; vertical-align: middle; }
+				td.label { width: 110px; white-space: nowrap; }   
+				td.controls { width: 230px; }                     
+				td.actions  { white-space: nowrap; }              
+				p.text { margin: 0; }
+				.select-lg { height: 26px; width: 100px; }        
+				.select-sm { height: 26px; width: 80px; }        
+				.Button { height: 26px; margin-left: 6px; }
+				</style>
+
+				<table class="control">
+				<tr>
+					<td class="label"><p class="text">Build Status:</p></td>
+					<td class="controls">
+					<select id="build-select" class="select-lg" onChange="changebuild(this.value)">
+						<option value="All_color_build">All_color</option>
+						<option value="Single_color_build">Single_color</option>
+					</select>
+					</td>
+					<!-- <td class="actions">
+					<input type="button" class="Button" value="Select" onClick="SelectBuildFunction()">
+					</td> -->
+				</tr>
+
+				<tr>
+					<td class="label"><p class="text">Color Select :</p></td>
+					<td class="controls">
+					<select id="colorlabel" class="select-sm" onChange="changecolorlabel(this.value)">
+						<option value="orange">Orange</option>
+						<option value="yellow">Yellow</option>
+						<option value="blue">Blue</option>
+						<option value="green">green</option>
+						<option value="black">Black</option>
+						<option value="red">Red</option>
+						<option value="white">White</option>
+						<option value="others">Others</option>
+					</select>
+					</td>
+					<td class="actions">
+					<input type="button" class="Button" value="Reset" onClick="ResetColorModelFunction()"><input type="button" class="Button" value="Close" onClick="CloseColorModelFunction()">
+					</td>
+				</tr>
+				</table>
+
+				<table>
+					<tr>
+						<td>
+							<p class="text">Hue:</p>
+						</td>
+						<td><img src="./picture/HSVS255.jpg" width="230" height="20">
+						</td>
+					</tr>
+					<tr>
+						<td rowspan="2"><input type="text" class="ValueText" id="hminValue" size="12" value="0" onchange="rangehminValue(this.value)" /></td>
+						<td><input class="Range" id="hminRange" name="hminRange" type="range" min="0" max="180" value="0" oninput="showhminValue(this.value)" /></td>
+						<td rowspan="2"><input type="text" class="ValueText" id="hmaxValue" size="12" value="180" onchange="rangehmaxValue(this.value)" /></td>
+					</tr>
+					<tr>
+						<td><input class="Range" id="hmaxRange" name="hmaxRange" type="range" min="0" max="180" value="180" oninput="showhmaxValue(this.value)" /></td>
+					</tr>
+					<tr>
+						<td colspan="3">
+							<p class="text">Saturation:</p>
+						</td>
+					</tr>
+					<tr>
+						<td rowspan="2"><input type="text" class="ValueText" id="sminValue" size="12" value="0" onchange="rangesminValue(this.value)" /></td>
+						<td><input class="Range" id="sminRange" name="sminRange" type="range" min="0" max="255" value="0" oninput="showsminValue(this.value)" /></td>
+						<td rowspan="2"><input type="text" class="ValueText" id="smaxValue" size="12" value="255" onchange="rangesmaxValue(this.value)" /></td>
+					</tr>
+					<tr>
+						<td><input class="Range" id="smaxRange" name="smaxRange" type="range" min="0" max="255" value="255" oninput="showsmaxValue(this.value)" /></td>
+					</tr>
+					<tr>
+						<td colspan="3">
+							<p class="text">Brightness:</p>
+						</td>
+					</tr>
+					<tr>
+						<td rowspan="2"><input type="text" class="ValueText" id="bminValue" size="12" value="0" onchange="rangebminValue(this.value)" /></td>
+						<td><input class="Range" id="bminRange" name="bminRange" type="range" min="0" max="255" value="0" oninput="showbminValue(this.value)" /></td>
+						<td rowspan="2"><input type="text" class="ValueText" id="bmaxValue" size="12" value="255" onchange="rangebmaxValue(this.value)" /></td>
+					</tr>
+					<tr>
+						<td><input class="Range" id="bmaxRange" name="bmaxRange" type="range" min="0" max="255" value="255" oninput="showbmaxValue(this.value)" /></td>
+					</tr>
+				</table>
+				<table width="320">
+					<tr>
+						<td align="center">
+							<input type="button" class="Button" id="SaveColorModel" value="Save" onClick="SaveColorModelFunction()" style="width:100px; height:30px"></input>
+						</td>
+						<!-- <td align="center">
+							<input type="button" class="Button" id="BuildColorModel" value="Build" onClick="BuildColorModelFunction()" style="width:100px;height:30px"></input>
+						</td> -->
+					</tr>
+				</table>
+			</div>
+
+			<div id="select">
+				<div>
+					<table width="320">
+						<tr>
+							<!-- 
+							 <td>
+								<input style="margin-right: 5px; height:25px;" type="button" class="Button" id="B_Start" value="Start" onClick="WebStart()"></input>
+							</td>
+							<td>
+								<input style="margin-right: 10px; height:25px;" type="button" class="Button" id="B_ColorModelForm" value=" No Torque?  Push me ʕ•ᴥ•ʔ  "
+								 onClick="ColorModelForm()"></input>
+							</td>
+							 -->
+							<td>
+								<input style="margin-left: 95px; margin-bottom: 5px;height:25px;" type="button" class="Button" id="B_Camera" value="Camera Save"
+								 onClick="CameraSave()"></input>
+							</td>
+							<!-- <td>
+								<input style="margin-left: 50px;margin-bottom: 5px;height:25px;" type="button" class="Button" id="B_Load" value="Load"
+								 onClick="LoadCamera()"></input>
+							</td>							 -->
+						</tr>
+					</table>
+				</div> 
+
+				<!-- <div>
+					<table width="320">
+						<tr>
+							<td colspan="3">
+								<p class="text" style="font-size: 15px;">Horizontal:</p>
+							</td>
+						</tr>
+						<tr>
+							<td rowspan="2"><input style="width: 39px;" type="text" class="ValueText" id="HorizontalPositionValue" size="12" value="2048" onchange="rangeHorizontalPosition(this.value)" /></td>
+							<td><input class="Range" id="HorizontalPositionRange" name="HorizontalPositionRange" type="range" min="1548" max="2548"
+								 value="2048" oninput="showHorizontalPosition(this.value)"/></td>
+							<td rowspan="2"><input style="width: 39px;" type="text" class="ValueText" id="HorizontalSpeedValue" size="12" value="1" onchange="rangeHorizontalSpeed(this.value)" /></td>
+						</tr>
+						<tr>
+							<td><input class="Range" id="HorizontalSpeedRange" name="HorizontalSpeedRange" type="range" min="1" max="200"
+								 value="1" oninput="showHorizontalSpeed(this.value)"/></td>
+						</tr>
+						<tr>
+							<td colspan="3">
+								<p class="text" style="font-size: 15px;">Vertical:</p>
+							</td>
+						</tr>
+						<tr>
+							<td rowspan="2"><input style="width: 39px;" type="text" class="ValueText" id="VerticalPositionValue" size="12" value="2048" onchange="rangeVerticalPosition(this.value)" /></td>
+							<td><input class="Range" id="VerticalPositionRange" name="VerticalPositionRange" type="range" min="1023" max="2048"
+								 value="2048" oninput="showVerticalPosition(this.value)" /></td>
+							<td rowspan="2"><input style="width: 39px;" type="text" class="ValueText" id="VerticalSpeedValue" size="12" value="1" onchange="rangeVerticalSpeed(this.value)" /></td>
+						</tr>
+						<tr>
+							<td><input class="Range" id="VerticalSpeedRange" name="VerticalSpeedRange" type="range" min="1" max="200" value="1"
+								 oninput="showVerticalSpeed(this.value)" /></td>
+						</tr>
+					</table>
+				</div> -->
+				<div id="Camera">
+					<div style="float:left; margin-left:8px;">
+						<input type="checkbox" name="AutoWhitBlance" id="AutoWhitBlance" onclick="changeAutoWhitBlance()">Auto White_blance
+					</div>
+					<div style="float:right; margin-right:12px;">
+						<input type="checkbox" name="auto_exposure" id="auto_exposure" onclick="changeauto_exposure()">Auto Exposure
+					</div>
+					<table width="320">
+						<tr>
+							<td colspan="3">
+								<p class="text">Camera Brightness:</p>
+							</td>
+						</tr>
+						<tr>
+							<td width="25"></td>
+							<td><input class="Range" id="CamBrightness" name="CamBrightness" type="range" min="-60" max="60" value="1"
+								 oninput="showCamBrightness(this.value)" /></td>
+							<td><input type="text" class="ValueText" id="CamBrightnessValue" size="12" value="1" onchange="rangeCamBrightnessValue(this.value)" /></td>
+						</tr>
+						<tr>
+							<td colspan="3">
+								<p class="text">Camera Contrast:</p>
+							</td>
+						</tr>
+						<tr>
+							<td width="25"></td>
+							<td><input class="Range" id="CamContrast" name="CamContrast" type="range" min="0" max="200" value="100" oninput="showCamContrast(this.value)" /></td>
+							<td><input type="text" class="ValueText" id="CamContrastValue" size="12" value="100" onchange="rangeCamContrastValue(this.value)" /></td>
+						</tr>
+						<tr>
+							<td colspan="3">
+								<p class="text">Camera Saturation:</p>
+							</td>
+						</tr>
+						<tr>
+							<td width="25"></td>
+							<td><input class="Range" id="CamSaturation" name="CamSaturation" type="range" min="0" max="100" value="50"
+								 oninput="showCamSaturation(this.value)" /></td>
+							<td><input type="text" class="ValueText" id="CamSaturationValue" size="12" value="50" onchange="rangeCamSaturationValue(this.value)" /></td>
+						</tr>
+						<tr>
+							<td colspan="3">
+								<p class="text">Camera WhiteBalance:</p>
+							</td>
+						</tr>
+						<tr>
+							<td width="25"></td>
+							<td><input class="Range" id="CamWhiteBalance" name="CamWhiteBalance" type="range" min="0" max="8000" value="4000"
+								 oninput="showCamWhiteBalance(this.value)" /></td>
+							<td><input type="text" class="ValueText" id="CamWhiteBalanceValue" size="12" value="4000" onchange="rangeCamWhiteBalanceValue(this.value)" /></td>
+						</tr>
+						<tr>
+							<td colspan="3">
+								<p class="text">Zoom_in:</p>
+							</td>
+						</tr>
+						<tr>
+							<td width="25"></td>
+							<td>
+							<input class="Range" id="ZoomIn" name="ZoomIn" type="range"
+									min="1" max="5" step="0.1" value="1"
+									oninput="showZoomIn(this.value)" />
+							</td>
+							<td>
+							<input type="text" class="ValueText" id="ZoomInValue" size="12"
+									min="1" max="5" step="0.1" value="1"
+									onchange="rangeZoomIn(this.value)" />
+							</td>
+						</tr>
+					</table>
+				</div>
+			</div>
+			<!-- 影像處裡順序面板（放中間那塊空的地方） -->
+			<div id="strategy_order">
+				<p class="text" style="font-size: 15px; margin-bottom: 6px;">影像處裡順序</p>
+
+				<!-- 左邊候選清單 -->
+				<ul id="strategy_order_left" style="list-style:none; padding:0; margin:0 0 8px 0;height:80px">
+					<!-- 這裡要放你可能會用到的策略，data-value 就是等一下要丟出去的字串 -->
+					<li data-value="/ar/Parameter" class="order-item">
+					<span class="item-label">AR</span>
+					<button type="button" class="mini-btn add-btn">＋</button>
+					</li>
+					<li data-value="/bb/Parameter" class="order-item">
+					<span class="item-label">BB</span>
+					<button type="button" class="mini-btn add-btn">＋</button>
+					</li>
+					<li data-value="/obs/Parameter" class="order-item">
+					<span class="item-label">OBS</span>
+					<button type="button" class="mini-btn add-btn">＋</button>
+					</li>
+					<li data-value="/wl/Parameter" class="order-item">
+					<span class="item-label">WL</span>
+					<button type="button" class="mini-btn add-btn">＋</button>
+					</li>
+					<li data-value="/sr/Parameter" class="order-item">
+					<span class="item-label">SR</span>
+					<button type="button" class="mini-btn add-btn">＋</button>
+					</li>
+				</ul>
+
+				<p class="text" style="font-size: 13px; margin: 4px 0 4px 0;">已選（可排序）</p>
+
+				<!-- 右邊已選清單 -->
+				<ul id="strategy_order_right" style="list-style:none; padding:0; margin:0; height:200px; overflow-y:auto;">
+				</ul>
+
+				<div style="text-align:center; margin-top:8px; display:flex; gap:6px; justify-content:center;">
+				<input type="button" class="Button" id="strategy_order_export" value="Send" style="width:70px; height:26px;">
+				<input type="button" class="Button" id="strategy_order_clear" value="清除" style="width:70px; height:26px;">
+				<input type="button" class="Button" id="strategy_order_save" value="Save" style="width:70px; height:26px;">
+				</div>
+				<!-- <div id="strategy_order_result" class="text" style="font-size:11px; margin-top:6px; word-break:break-all;"></div> -->
+			</div>
+			<div id="YUV_Range">
+			<style>
+				table.control { border-collapse: collapse; width: auto; }
+				table.control td { padding: 4px; vertical-align: middle; }
+				td.label { width: 110px; white-space: nowrap; }
+				td.controls { width: 230px; }
+				td.actions  { white-space: nowrap; }
+				p.text { margin: 0; }
+				.select-lg { height: 26px; width: 100px; }
+				.select-sm { height: 26px; width: 80px; }
+				.Button { height: 26px; margin-left: 6px; }
+
+				/* Y 上面的色帶可以留也可以拿掉，這裡先保留 */
+				.color-bar {
+				width: 230px;
+				height: 20px;
+				border-radius: 4px;
+				border: 1px solid #555;
+				}
+				.y-bar {
+				background: linear-gradient(to right, #000 0%, #fff 100%);
+				}
+
+				/* 下方預覽區 */
+				#YUV_PreviewRow {
+				margin-top: 6px;
+				margin-left: 15px;
+				display: flex;
+				gap: 12px;
+				align-items: center;
+				}
+				#YUV_PreviewBox {
+				width: 40px;
+				height: 40px;
+				border: 1px solid #555;
+				border-radius: 4px;
+				background: #000;
+				}
+				#YUV_RangeBar {
+				border: 1px solid #555;
+				border-radius: 4px;
+				background: #000;
+				image-rendering: pixelated;
+				display: block;
+				}
+
+				/* 可點的 2D Cr-Cb 方塊 */
+				#YUV_Canvas {
+				border: 1px solid #555;
+				image-rendering: pixelated;
+				cursor: crosshair;
+				background: #000;
+				display: block;
+				margin-top: 4px;
+				margin-left: 10px;
+				}
+
+				/* 右邊那條輸入的 panel */
+				.yuv-side-inputs {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				margin-top: 50px;
+				}
+				.yuv-side-row {
+				display: flex;
+				align-items: center;
+				gap: 4px;
+				font-size: 12px;
+				}
+				.yuv-side-row label {
+				width: 28px;
+				text-align: right;
+				color: #eee;
+				}
+				.yuv-side-row input {
+				width: 45px;
+				}
+				.yuv-row-flex {
+				display: flex;
+				gap: 8px;
+				align-items: flex-start;
+				max-width: 320px;   /* 👈 這行很重要，限制它不要超出你的面板寬 */
+				}
+
+				.yuv-side-inputs {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				min-width: 90px;    /* 避免被壓到 */
+				}
+
+				.yuv-side-row {
+				display: flex;
+				gap: 4px;
+				align-items: center;
+				font-size: 12px;
+				}
+
+				.yuv-side-row label {
+				width: 26px;
+				text-align: right;
+				}
+				.yuv-side-row input {
+				width: 46px;
+				}
+
+			</style>
+
+			<!-- 上面：Build / Color -->
+			<table class="control">
+				<tr>
+				<td class="label"><p class="text">Build Status:</p></td>
+				<td class="controls">
+					<select id="yuv-build-select" class="select-lg" onChange="changeYUVbuild(this.value)">
+					<option value="yuv_All_color_build">All_color</option>
+					<option value="yuv_Single_color_build">Single_color</option>
+					</select>
+				</td>
+				</tr>
+
+				<tr>
+				<td class="label"><p class="text">Color Select :</p></td>
+				<td class="controls">
+					<select id="yuv_colorlabel" class="select-sm" onChange="changeYUVcolorlabel(this.value)">
+					<option value="orange">Orange</option>
+					<option value="yellow">Yellow</option>
+					<option value="blue">Blue</option>
+					<option value="green">green</option>
+					<option value="black">Black</option>
+					<option value="red">Red</option>
+					<option value="white">White</option>
+					<option value="others">Others</option>
+					</select>
+				</td>
+				<td class="actions">
+					<input type="button" class="Button" value="Reset" onClick="ResetYUVColorModelFunction()">
+					<input type="button" class="Button" value="Close" onClick="CloseYUVColorModelFunction()">
+				</td>
+				</tr>
+			</table>
+
+			<!-- Y + slider -->
+			<table>
+				<tr>
+				<td><p class="text">Y:</p></td>
+				</tr>
+				<tr>
+				<td rowspan="2">
+					<input type="text" class="ValueText" id="YminValue" size="12" value="0"
+						onchange="rangeYUVValue(); updateYUVPreview();" />
+				</td>
+				<td>
+					<input class="Range" id="YminRange" name="YminRange" type="range"
+						min="0" max="255" value="0"
+						oninput="showYUVValue(); updateYUVPreview();" />
+				</td>
+				<td rowspan="2">
+					<input type="text" class="ValueText" id="YmaxValue" size="12" value="255"
+						onchange="rangeYUVValue(); updateYUVPreview();" />
+				</td>
+				</tr>
+				<tr>
+				<td>
+					<input class="Range" id="YmaxRange" name="YmaxRange" type="range"
+						min="0" max="255" value="255"
+						oninput="showYUVValue(); updateYUVPreview();" />
+				</td>
+				</tr>
+
+				<tr>
+				<td colspan="3">
+					<div class="yuv-row-flex">
+					<canvas id="YUV_Canvas" width="160" height="160"></canvas>
+
+					<div class="yuv-side-inputs">
+						<div class="yuv-side-row">
+						<label>Cr</label>
+						<input type="number" class="ValueText" id="CrminValue" value="100" onchange="updateYUVPreview()" />
+						<input type="number" class="ValueText" id="CrmaxValue" value="150" onchange="updateYUVPreview()" />
+						</div>
+						<div class="yuv-side-row">
+						<label>Cb</label>
+						<input type="number" class="ValueText" id="CbminValue" value="100" onchange="updateYUVPreview()" />
+						<input type="number" class="ValueText" id="CbmaxValue" value="150" onchange="updateYUVPreview()" />
+						</div>
+						<div class="yuv-side-row">
+						<label>r</label>
+						<input type="number" class="ValueText" id="PadValue" value="10" />
+						</div>
+            </div>
+            <div class="yuv-side-row">
+              <button type="button" onclick="pickFromPage()">全頁吸管(假)</button>
+
+            </div>
+					</div>
+				</td>
+				</tr>
+
+				<!-- 預覽方塊 + bar -->
+				<tr>
+				<td colspan="3">
+					<div id="YUV_PreviewRow">
+					<div><div id="YUV_PreviewBox"></div></div>
+					<div><canvas id="YUV_RangeBar" width="230" height="24"></canvas></div>
+					</div>
+				</td>
+				</tr>
+			</table>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+  // 你剛剛有的
+  function clamp255(v) {
+    v = parseInt(v, 10);
+    if (isNaN(v)) return 0;
+    return Math.min(255, Math.max(0, v));
+  }
+
+  function rgbToYCrCb(R, G, B) {
+    const Y  = Math.round(0.299 * R + 0.587 * G + 0.114 * B);
+    const Cr = clamp255(Math.round((R - Y) * 0.713 + 128));
+    const Cb = clamp255(Math.round((B - Y) * 0.564 + 128));
+    return { Y: clamp255(Y), Cr, Cb };
+  }
+
+  async function pickFromPage() {
+    // 1) 先抓你那個 panel，不要一開始就抓整個 body
+    const target = document.getElementById('YUV_Range');
+    if (!target) {
+      alert('找不到 #YUV_Range，先確認一下 id 有沒有打對');
+      return;
+    }
+
+    try {
+      console.log('[picker] start capture...');
+      const captureCanvas = await html2canvas(target, {
+        useCORS: true,
+        logging: false,
+      });
+      console.log('[picker] capture done.');
+
+      // 2) 做遮罩（這次 z-index 拉超高，避免被蓋住）
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.left = 0;
+      overlay.style.top = 0;
+      overlay.style.right = 0;
+      overlay.style.bottom = 0;
+      overlay.style.background = 'rgba(0,0,0,0.03)';
+      overlay.style.zIndex = 2147483647;  // int max
+      overlay.style.cursor = 'crosshair';
+      document.body.appendChild(overlay);
+
+      // 3) 把剛剛截到的東西貼進去
+      const view = document.createElement('canvas');
+      view.width  = captureCanvas.width;
+      view.height = captureCanvas.height;
+      view.style.width  = captureCanvas.width + 'px';
+      view.style.height = captureCanvas.height + 'px';
+      overlay.appendChild(view);
+
+      const vctx = view.getContext('2d', { willReadFrequently: true });
+      vctx.drawImage(captureCanvas, 0, 0);
+
+      // 4) 點一下 → 吸顏色
+      overlay.addEventListener('click', (e) => {
+        const rect = view.getBoundingClientRect();
+        // 把滑鼠座標換成 canvas 座標
+        const x = Math.floor((e.clientX - rect.left) * (view.width  / rect.width));
+        const y = Math.floor((e.clientY - rect.top)  * (view.height / rect.height));
+
+        const pixel = vctx.getImageData(x, y, 1, 1).data;
+        const R = pixel[0], G = pixel[1], B = pixel[2];
+
+        const { Y, Cr, Cb } = rgbToYCrCb(R, G, B);
+        const padY = 10;
+        const yMin = clamp255(Y - padY);
+        const yMax = clamp255(Y + padY);
+        const pad  = parseInt(document.getElementById('PadValue')?.value, 10) || 0;
+
+        document.getElementById('YminValue').value = yMin;
+        document.getElementById('YmaxValue').value = yMax;
+        document.getElementById('YminRange').value = yMin;
+        document.getElementById('YmaxRange').value = yMax;
+
+        document.getElementById('CrminValue').value = clamp255(Cr - pad);
+        document.getElementById('CrmaxValue').value = clamp255(Cr + pad);
+        document.getElementById('CbminValue').value = clamp255(Cb - pad);
+        document.getElementById('CbmaxValue').value = clamp255(Cb + pad);
+
+        if (typeof updateYUVPreview === 'function') {
+          updateYUVPreview();
+        }
+
+        document.body.removeChild(overlay);
+      });
+
+    } catch (err) {
+      console.error('[picker] capture error:', err);
+      alert('html2canvas 截圖失敗，通常是因為畫面裡有「別的來源」的圖片/串流 (CORS)。\n你可以只截同一個網域的元素，或換用原生 EyeDropper。');
+    }
+  }
+</script>
+			<script>
+        function hexToRgb(hex) {
+  hex = hex.replace('#', '');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return { r, g, b };
+}
+
+// 這顆是「全頁吸管」
+// const pagePickerBtn = document.getElementById('YUV_PagePickerBtn');
+// if (pagePickerBtn) {
+//   pagePickerBtn.addEventListener('click', async () => {
+//     if (!window.EyeDropper) {
+//       alert('這個瀏覽器不支援 EyeDropper，現在只能吸 canvas。');
+//       return;
+//     }
+//     try {
+//       const ed = new EyeDropper();
+//       const result = await ed.open();   // 這裡會跳出瀏覽器的吸管工具
+//       const { r, g, b } = hexToRgb(result.sRGBHex);
+
+//       // 轉成 YCrCb
+//       const { Y, Cr, Cb } = rgbToYCrCb(r, g, b);
+
+//       // 給個 Y 範圍（你可以調整 10 → 5 之類的）
+//       const padY = 10;
+//       const yMin = clamp255(Y - padY);
+//       const yMax = clamp255(Y + padY);
+
+//       // 用你右邊的 r 當 Cr/Cb 半徑
+//       const pad = parseInt(document.getElementById('PadValue').value, 10) || 0;
+//       const crMin = clamp255(Cr - pad);
+//       const crMax = clamp255(Cr + pad);
+//       const cbMin = clamp255(Cb - pad);
+//       const cbMax = clamp255(Cb + pad);
+
+//       // 填回去
+//       document.getElementById('YminValue').value = yMin;
+//       document.getElementById('YmaxValue').value = yMax;
+//       document.getElementById('YminRange').value = yMin;
+//       document.getElementById('YmaxRange').value = yMax;
+
+//       document.getElementById('CrminValue').value = crMin;
+//       document.getElementById('CrmaxValue').value = crMax;
+//       document.getElementById('CbminValue').value = cbMin;
+//       document.getElementById('CbmaxValue').value = cbMax;
+
+//       // 叫你原本的重畫
+//       updateYUVPreview();
+//     } catch (err) {
+//       // 使用者按 ESC 或取消就會到這裡
+//       console.log('EyeDropper cancelled', err);
+//     }
+//   });
+// }
+
+
+async function openFakeEyedropper() {
+  // 1. 把整個 body 轉成一張 canvas
+  const canvas = await html2canvas(document.body, {
+    useCORS: true,   // 有些圖有 CORS 才抓得到
+    logging: false
+  });
+
+  // 2. 做一層全螢幕遮罩
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.left = 0;
+  overlay.style.top = 0;
+  overlay.style.right = 0;
+  overlay.style.bottom = 0;
+  overlay.style.zIndex = 99999;
+  overlay.style.cursor = 'crosshair';
+  overlay.style.background = 'rgba(0,0,0,0.05)'; // 淡淡的
+  document.body.appendChild(overlay);
+
+  // 3. 把剛剛的 canvas 變成影像貼在上面（看起來就像原畫面）
+  const fake = document.createElement('canvas');
+  fake.width = canvas.width;
+  fake.height = canvas.height;
+  fake.style.width = '100%';
+  fake.style.height = '100%';
+  overlay.appendChild(fake);
+
+  const fctx = fake.getContext('2d');
+  fctx.drawImage(canvas, 0, 0);
+
+  // 4. 點一下 → 取像素 → 填回去
+  overlay.addEventListener('click', (e) => {
+    const rect = fake.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) * (fake.width  / rect.width));
+    const y = Math.floor((e.clientY - rect.top)  * (fake.height / rect.height));
+
+    const pixel = fctx.getImageData(x, y, 1, 1).data;
+    const R = pixel[0], G = pixel[1], B = pixel[2];
+
+    // 跟你現在那個一樣的轉法
+    const { Y, Cr, Cb } = rgbToYCrCb(R, G, B);
+
+    // 這裡就可以塞回你的欄位
+    const padY = 10;
+    const yMin = clamp255(Y - padY);
+    const yMax = clamp255(Y + padY);
+    document.getElementById('YminValue').value = yMin;
+    document.getElementById('YmaxValue').value = yMax;
+    document.getElementById('YminRange').value = yMin;
+    document.getElementById('YmaxRange').value = yMax;
+
+    const pad = parseInt(document.getElementById('PadValue').value, 10) || 0;
+    document.getElementById('CrminValue').value = clamp255(Cr - pad);
+    document.getElementById('CrmaxValue').value = clamp255(Cr + pad);
+    document.getElementById('CbminValue').value = clamp255(Cb - pad);
+    document.getElementById('CbmaxValue').value = clamp255(Cb + pad);
+
+    updateYUVPreview();  // 你原本的重畫函式
+
+    // 用完關掉
+    document.body.removeChild(overlay);
+  });
+}
+
+
+        let yuvPickerMode = false;
+        const yuvPickerBtn = document.getElementById('YUV_PickerBtn');
+
+        if (yuvPickerBtn) {
+          yuvPickerBtn.addEventListener('click', () => {
+            yuvPickerMode = !yuvPickerMode;
+            yuvPickerBtn.textContent = yuvPickerMode ? '吸管中…' : '吸管';
+          });
+        }
+				// 2D canvas
+				const yuvCanvas = document.getElementById('YUV_Canvas');
+				const yuvCtx    = yuvCanvas.getContext('2d');
+
+				function clamp255(v) {
+				v = parseInt(v, 10);
+				if (isNaN(v)) return 0;
+				return Math.min(255, Math.max(0, v));
+				}
+
+				function ycrcbToRgb(Y, Cr, Cb) {
+				let R = Y + 1.403 * (Cr - 128);
+				let G = Y - 0.714 * (Cr - 128) - 0.344 * (Cb - 128);
+				let B = Y + 1.773 * (Cb - 128);
+				R = Math.min(255, Math.max(0, Math.round(R)));
+				G = Math.min(255, Math.max(0, Math.round(G)));
+				B = Math.min(255, Math.max(0, Math.round(B)));
+				return [R, G, B];
+				}
+				function drawYUVCanvas() {
+					let yMin = clamp255(document.getElementById('YminValue').value);
+					let yMax = clamp255(document.getElementById('YmaxValue').value);
+					if (yMin > yMax) { const t = yMin; yMin = yMax; yMax = t; }
+					const yMid = Math.round((yMin + yMax) / 2);
+
+					const w = yuvCanvas.width;
+					const h = yuvCanvas.height;
+					const imgData = yuvCtx.createImageData(w, h);
+					const data = imgData.data;
+
+					// 這裡用比例把 0~(w-1) 映到 0~255
+					for (let py = 0; py < h; py++) {
+						const Cb = Math.round(py / (h - 1) * 255);
+						for (let px = 0; px < w; px++) {
+						const Cr = Math.round(px / (w - 1) * 255);
+
+						const [R, G, B] = ycrcbToRgb(yMid, Cr, Cb);
+						const idx = (py * w + px) * 4;
+						data[idx+0] = R;
+						data[idx+1] = G;
+						data[idx+2] = B;
+						data[idx+3] = 255;
+						}
+					}
+
+					yuvCtx.putImageData(imgData, 0, 0);
+					drawCurrentRect();  // 畫紅框要用「反向縮放」
+				}
+
+
+				function drawCurrentRect() {
+					const crMin = clamp255(document.getElementById('CrminValue').value);
+					const crMax = clamp255(document.getElementById('CrmaxValue').value);
+					const cbMin = clamp255(document.getElementById('CbminValue').value);
+					const cbMax = clamp255(document.getElementById('CbmaxValue').value);
+
+					const w = yuvCanvas.width;
+					const h = yuvCanvas.height;
+
+					// 把 0~255 的座標轉成畫布座標
+					const x1 = crMin / 255 * (w - 1);
+					const x2 = crMax / 255 * (w - 1);
+					const y1 = cbMin / 255 * (h - 1);
+					const y2 = cbMax / 255 * (h - 1);
+
+					yuvCtx.save();
+					yuvCtx.strokeStyle = 'red';
+					yuvCtx.lineWidth = 1;
+					yuvCtx.strokeRect(
+						x1 + 0.5,
+						y1 + 0.5,
+						(x2 - x1),
+						(y2 - y1)
+					);
+					yuvCtx.restore();
+				}
+
+				yuvCanvas.addEventListener('click', (e) => {
+          const rect = yuvCanvas.getBoundingClientRect();
+          const px = e.clientX - rect.left;     // 畫布座標 x
+          const py = e.clientY - rect.top;      // 畫布座標 y
+          const w = yuvCanvas.width;
+          const h = yuvCanvas.height;
+
+          // =============== 吸管模式 ===============
+          if (yuvPickerMode) {
+            // 1) 真的去抓這個像素的 RGB
+            const pixel = yuvCtx.getImageData(px, py, 1, 1).data;
+            const R = pixel[0], G = pixel[1], B = pixel[2];
+
+            // 2) 轉成 YCrCb
+            const ycc = rgbToYCrCb(R, G, B);
+            let Y  = ycc.Y;
+            let Cr = ycc.Cr;
+            let Cb = ycc.Cb;
+
+            // 3) Y 給個上下範圍（你可以調 padY）
+            const padY = 10;
+            const Ymin = clamp255(Y - padY);
+            const Ymax = clamp255(Y + padY);
+
+            // 4) Cr/Cb 用你右邊輸入的 r 當半徑
+            const pad = parseInt(document.getElementById('PadValue').value, 10) || 0;
+            const Crmin = clamp255(Cr - pad);
+            const Crmax = clamp255(Cr + pad);
+            const Cbmin = clamp255(Cb - pad);
+            const Cbmax = clamp255(Cb + pad);
+
+            // 5) 寫回所有 input（包含 slider）
+            document.getElementById('YminValue').value = Ymin;
+            document.getElementById('YmaxValue').value = Ymax;
+            // 你的 slider id 是這兩個
+            document.getElementById('YminRange').value = Ymin;
+            document.getElementById('YmaxRange').value = Ymax;
+
+            document.getElementById('CrminValue').value = Crmin;
+            document.getElementById('CrmaxValue').value = Crmax;
+            document.getElementById('CbminValue').value = Cbmin;
+            document.getElementById('CbmaxValue').value = Cbmax;
+
+            // 6) 重畫
+            updateYUVPreview();
+
+            // 7) 吸完可以自動關（看你要不要）
+            yuvPickerMode = false;
+            if (yuvPickerBtn) yuvPickerBtn.textContent = '吸管';
+            return;
+          }
+
+          // =============== 原本的「點一下抓一塊」模式 ===============
+          // 畫布座標 → 真正的 Cr/Cb (0~255) 這裡要做縮放
+          const Cr = Math.round(px / (w - 1) * 255);
+          const Cb = Math.round(py / (h - 1) * 255);
+          const pad = parseInt(document.getElementById('PadValue').value, 10) || 0;
+
+          let crMin = Math.max(0, Cr - pad);
+          let crMax = Math.min(255, Cr + pad);
+          let cbMin = Math.max(0, Cb - pad);
+          let cbMax = Math.min(255, Cb + pad);
+
+          document.getElementById('CrminValue').value = crMin;
+          document.getElementById('CrmaxValue').value = crMax;
+          document.getElementById('CbminValue').value = cbMin;
+          document.getElementById('CbmaxValue').value = cbMax;
+
+          updateYUVPreview();
+        });
+
+				function updateYUVPreview() {
+				let yMin = clamp255(document.getElementById('YminValue').value);
+				let yMax = clamp255(document.getElementById('YmaxValue').value);
+				if (yMin > yMax) { const t=yMin; yMin=yMax; yMax=t; }
+
+				let crMin = clamp255(document.getElementById('CrminValue').value);
+				let crMax = clamp255(document.getElementById('CrmaxValue').value);
+				if (crMin > crMax) { const t=crMin; crMin=crMax; crMax=t; }
+
+				let cbMin = clamp255(document.getElementById('CbminValue').value);
+				let cbMax = clamp255(document.getElementById('CbmaxValue').value);
+				if (cbMin > cbMax) { const t=cbMin; cbMin=cbMax; cbMax=t; }
+
+				const yMid  = Math.round((yMin + yMax) / 2);
+				const crMid = Math.round((crMin + crMax) / 2);
+				const cbMid = Math.round((cbMin + cbMax) / 2);
+
+				// 方塊
+				const [R, G, B] = ycrcbToRgb(yMid, crMid, cbMid);
+				const box = document.getElementById('YUV_PreviewBox');
+				if (box) box.style.backgroundColor = `rgb(${R}, ${G}, ${B})`;
+
+				// bar
+				const bar = document.getElementById('YUV_RangeBar');
+				if (bar) {
+					const ctx = bar.getContext('2d');
+					const w = bar.width, h = bar.height;
+					const imgData = ctx.createImageData(w, h);
+					const data = imgData.data;
+					const yrange = Math.max(1, yMax - yMin);
+
+					for (let x = 0; x < w; x++) {
+					const t = x / (w - 1);
+					const Y = Math.round(yMin + t * yrange);
+					const [r, g, b] = ycrcbToRgb(Y, crMid, cbMid);
+					for (let yy = 0; yy < h; yy++) {
+						const idx = (yy * w + x) * 4;
+						data[idx+0] = r;
+						data[idx+1] = g;
+						data[idx+2] = b;
+						data[idx+3] = 255;
+					}
+					}
+					ctx.putImageData(imgData, 0, 0);
+				}
+
+				// 重新畫 2D
+				drawYUVCanvas();
+				}
+
+				// 初次進來先畫一次
+				updateYUVPreview();
+			</script>
+
+			<table width="320">
+				<tr>
+				<td align="center">
+					<input type="button" class="Button" id="SaveYUVColorModel" value="Save" onClick="SaveYUVColorModelFunction()" style="width:100px; height:30px" disabled="disabled"></input>
+				</td>
+				</tr>
+			</table>
+			</div>
+
+
+	</form>
+	<script>
+			// === 影像處裡順序面板 ===
+		const orderLeft  = document.getElementById('strategy_order_left');
+		const orderRight = document.getElementById('strategy_order_right');
+		const orderExport = document.getElementById('strategy_order_export');
+		// const orderResult = document.getElementById('strategy_order_result');
+
+		// 左邊按「＋」→ 加到右邊
+		orderLeft.addEventListener('click', function (e) {
+		if (!e.target.classList.contains('add-btn')) return;
+		const li = e.target.closest('li');
+		const label = li.querySelector('.item-label').textContent.trim();
+		const value = li.getAttribute('data-value');
+		addOrderItem(label, value);
+		});
+
+		function addOrderItem(label, value) {
+			const li = document.createElement('li');
+			li.className = 'order-item';
+			li.setAttribute('data-value', value);
+
+			const span = document.createElement('span');
+			span.className = 'item-label';
+			span.textContent = label;
+			li.appendChild(span);
+
+			// ↑
+			const btnUp = document.createElement('button');
+			btnUp.type = 'button';               // ← 加這行
+			btnUp.className = 'mini-btn';
+			btnUp.textContent = '↑';
+			btnUp.addEventListener('click', function () {
+				moveOrderItem(li, -1);
+			});
+			li.appendChild(btnUp);
+
+			// ↓
+			const btnDown = document.createElement('button');
+			btnDown.type = 'button';             // ← 加這行
+			btnDown.className = 'mini-btn';
+			btnDown.textContent = '↓';
+			btnDown.addEventListener('click', function () {
+				moveOrderItem(li, 1);
+			});
+			li.appendChild(btnDown);
+
+			// ✕
+			const btnDel = document.createElement('button');
+			btnDel.type = 'button';              // ← 加這行
+			btnDel.className = 'mini-btn';
+			btnDel.textContent = '✕';
+			btnDel.addEventListener('click', function () {
+				li.remove();
+			});
+			li.appendChild(btnDel);
+
+			orderRight.appendChild(li);
+		}
+
+		function moveOrderItem(li, dir) {
+		const parent = li.parentElement;
+		const items = Array.from(parent.children);
+		const idx = items.indexOf(li);
+		const newIdx = idx + dir;
+		if (newIdx < 0 || newIdx >= items.length) return;
+		if (dir === -1) {
+			parent.insertBefore(li, items[newIdx]);
+		} else {
+			parent.insertBefore(li, items[newIdx].nextSibling);
+		}
+		}
+
+		// 輸出順序 → 你之後可以在這裡 publish /location 陣列
+		// orderExport.addEventListener('click', function () {
+		// const arr = Array.from(orderRight.children).map(li => li.getAttribute('data-value'));
+		// // orderResult.textContent = JSON.stringify(arr);
+		// console.log('影像處裡順序:', arr);
+		// // 這裡如果你要真的送 ROS，就可以在這裡呼叫
+		// // arr[0] 就是第一個要用的 /xx/Parameter
+		// });
+		document.addEventListener('DOMContentLoaded', function () {
+			const orderLeft   = document.getElementById('strategy_order_left');
+			const orderRight  = document.getElementById('strategy_order_right');
+			const orderExport = document.getElementById('strategy_order_export');
+			// const orderResult = document.getElementById('strategy_order_result');
+			const orderClear  = document.getElementById('strategy_order_clear');
+			const orderSave   = document.getElementById('strategy_order_save');
+
+			// ...前面那些 addOrderItem、moveOrderItem 就照你原本的...
+
+			// 輸出
+			orderExport.addEventListener('click', function () {
+				const arr = Array.from(orderRight.children).map(li => li.getAttribute('data-value'));
+				// orderResult.textContent = JSON.stringify(arr);
+				console.log('影像處裡順序:', arr);
+			});
+
+			// 清除
+			orderClear.addEventListener('click', function () {
+				orderRight.innerHTML = '';          // 全部刪掉
+				// orderResult.textContent = '';       // 順便清顯示
+			});
+
+			// Save（留給你）
+			orderSave.addEventListener('click', function () {
+				// 這裡你自己補
+				// const arr = Array.from(orderRight.children).map(li => li.getAttribute('data-value'));
+				// 存檔 / call service / publish ...
+			});
+			});
+	</script>
+</body>
+
+</html>

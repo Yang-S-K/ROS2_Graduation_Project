@@ -1,0 +1,17 @@
+// generated from rosidl_adapter/resource/srv.idl.em
+// with input from ysk_msgs/srv/OpenCvInfo.srv
+// generated code does not contain a copyright notice
+
+
+module ysk_msgs {
+  module srv {
+    struct OpenCvInfo_Request {
+      uint8 structure_needs_at_least_one_member;
+    };
+    struct OpenCvInfo_Response {
+      sequence<string> order;
+
+      boolean already;
+    };
+  };
+};

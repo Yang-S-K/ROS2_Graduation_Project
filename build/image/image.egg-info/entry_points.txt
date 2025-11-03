@@ -1,0 +1,3 @@
+[console_scripts]
+image = image.image:main
+

@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "ysk_msgs__py",
+		"source" : "/home/iclab/ysk/build/ysk_msgs/ysk_msgs__py"
+	}
+}

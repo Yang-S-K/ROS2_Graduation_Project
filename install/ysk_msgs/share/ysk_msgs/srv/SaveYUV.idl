@@ -1,0 +1,17 @@
+// generated from rosidl_adapter/resource/srv.idl.em
+// with input from ysk_msgs/srv/SaveYUV.srv
+// generated code does not contain a copyright notice
+
+
+module ysk_msgs {
+  module srv {
+    struct SaveYUV_Request {
+      boolean save;
+
+      string location;
+    };
+    struct SaveYUV_Response {
+      boolean already;
+    };
+  };
+};

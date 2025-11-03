@@ -1,0 +1,19 @@
+{
+  "package_name": "ysk_msgs",
+  "non_idl_tuples": [
+    "/home/iclab/ysk/src/ysk_msgs:msg/Camera.msg",
+    "/home/iclab/ysk/src/ysk_msgs:msg/CameraSave.msg",
+    "/home/iclab/ysk/src/ysk_msgs:msg/Zoom.msg",
+    "/home/iclab/ysk/src/ysk_msgs:msg/HSVValue.msg",
+    "/home/iclab/ysk/src/ysk_msgs:msg/YUVValue.msg",
+    "/home/iclab/ysk/src/ysk_msgs:msg/Location.msg",
+    "/home/iclab/ysk/src/ysk_msgs:msg/OpenCvOrder.msg",
+    "/home/iclab/ysk/src/ysk_msgs:srv/CameraInfo.srv",
+    "/home/iclab/ysk/src/ysk_msgs:srv/HSVInfo.srv",
+    "/home/iclab/ysk/src/ysk_msgs:srv/YUVInfo.srv",
+    "/home/iclab/ysk/src/ysk_msgs:srv/OpenCvInfo.srv",
+    "/home/iclab/ysk/src/ysk_msgs:srv/SaveHSV.srv",
+    "/home/iclab/ysk/src/ysk_msgs:srv/SaveYUV.srv",
+    "/home/iclab/ysk/src/ysk_msgs:srv/SaveOpenCv.srv"
+  ]
+}

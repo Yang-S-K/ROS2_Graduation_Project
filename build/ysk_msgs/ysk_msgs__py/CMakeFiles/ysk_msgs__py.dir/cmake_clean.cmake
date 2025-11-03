@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "../rosidl_generator_py/ysk_msgs/_ysk_msgs_s.ep.rosidl_typesupport_c.c"
+  "../rosidl_generator_py/ysk_msgs/_ysk_msgs_s.ep.rosidl_typesupport_fastrtps_c.c"
+  "../rosidl_generator_py/ysk_msgs/_ysk_msgs_s.ep.rosidl_typesupport_introspection_c.c"
+  "../rosidl_generator_py/ysk_msgs/msg/__init__.py"
+  "../rosidl_generator_py/ysk_msgs/msg/_camera.py"
+  "../rosidl_generator_py/ysk_msgs/msg/_camera_s.c"
+  "../rosidl_generator_py/ysk_msgs/msg/_camera_save.py"
+  "../rosidl_generator_py/ysk_msgs/msg/_camera_save_s.c"
+  "../rosidl_generator_py/ysk_msgs/msg/_hsv_value.py"
+  "../rosidl_generator_py/ysk_msgs/msg/_hsv_value_s.c"
+  "../rosidl_generator_py/ysk_msgs/msg/_location.py"
+  "../rosidl_generator_py/ysk_msgs/msg/_location_s.c"
+  "../rosidl_generator_py/ysk_msgs/msg/_open_cv_order.py"
+  "../rosidl_generator_py/ysk_msgs/msg/_open_cv_order_s.c"
+  "../rosidl_generator_py/ysk_msgs/msg/_yuv_value.py"
+  "../rosidl_generator_py/ysk_msgs/msg/_yuv_value_s.c"
+  "../rosidl_generator_py/ysk_msgs/msg/_zoom.py"
+  "../rosidl_generator_py/ysk_msgs/msg/_zoom_s.c"
+  "../rosidl_generator_py/ysk_msgs/srv/__init__.py"
+  "../rosidl_generator_py/ysk_msgs/srv/_camera_info.py"
+  "../rosidl_generator_py/ysk_msgs/srv/_camera_info_s.c"
+  "../rosidl_generator_py/ysk_msgs/srv/_hsv_info.py"
+  "../rosidl_generator_py/ysk_msgs/srv/_hsv_info_s.c"
+  "../rosidl_generator_py/ysk_msgs/srv/_open_cv_info.py"
+  "../rosidl_generator_py/ysk_msgs/srv/_open_cv_info_s.c"
+  "../rosidl_generator_py/ysk_msgs/srv/_save_hsv.py"
+  "../rosidl_generator_py/ysk_msgs/srv/_save_hsv_s.c"
+  "../rosidl_generator_py/ysk_msgs/srv/_save_open_cv.py"
+  "../rosidl_generator_py/ysk_msgs/srv/_save_open_cv_s.c"
+  "../rosidl_generator_py/ysk_msgs/srv/_save_yuv.py"
+  "../rosidl_generator_py/ysk_msgs/srv/_save_yuv_s.c"
+  "../rosidl_generator_py/ysk_msgs/srv/_yuv_info.py"
+  "../rosidl_generator_py/ysk_msgs/srv/_yuv_info_s.c"
+  "CMakeFiles/ysk_msgs__py"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang )
+  include(CMakeFiles/ysk_msgs__py.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

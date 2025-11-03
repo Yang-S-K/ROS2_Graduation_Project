@@ -1,0 +1,14 @@
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:msg/Camera.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:msg/CameraSave.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:msg/Zoom.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:msg/HSVValue.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:msg/YUVValue.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:msg/Location.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:msg/OpenCvOrder.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:srv/CameraInfo.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:srv/HSVInfo.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:srv/YUVInfo.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:srv/OpenCvInfo.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:srv/SaveHSV.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:srv/SaveYUV.idl
+/home/iclab/ysk/build/ysk_msgs/rosidl_adapter/ysk_msgs:srv/SaveOpenCv.idl
